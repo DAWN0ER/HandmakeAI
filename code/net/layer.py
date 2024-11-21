@@ -6,5 +6,14 @@ class Layer:
     def forward(self, input):
         pass
 
-    def backward(self, output_grad, learning_rate):
+    def backward(self, output_grad, batch_size):
+        pass
+
+    def zero_grad(self):
+        pass
+
+    def SDG_grad(self,delta):
+        pass
+
+    def optimize(self,learning_rate):
         pass

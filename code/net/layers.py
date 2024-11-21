@@ -6,19 +6,33 @@ class Fc(Layer):
     def __init__(self,input_size,output_size):
         self.weights = np.random.randn(output_size,input_size)
         self.bias = np.random.randn(output_size,1)
+        self.weights_grad = np.zeros(self.weights.shape)
+        self.bias_grad = np.zeros(self.bias.shape)
 
     def forward(self, input):
         self.input = input
         return np.dot(self.weights,self.input) + self.bias
     
-    def backward(self, output_grad, learning_rate):
+    def backward(self, output_grad):
         w_grad = np.dot(output_grad, self.input.T)
         input_grad = np.dot(self.weights.T, output_grad)
 
-        self.weights -= learning_rate * w_grad
-        self.bias -= learning_rate * output_grad
+        self.weights_grad += w_grad
+        self.bias_grad += output_grad
 
         return input_grad
+    
+    def zero_grad(self):
+        self.weights_grad = np.zeros(self.weights.shape)
+        self.bias_grad = np.zeros(self.bias.shape)
+    
+    def optimize(self, learning_rate):
+        self.weights -= learning_rate * self.weights_grad
+        self.bias -= learning_rate * self.bias_grad
+
+    def SDG_grad(self, delta):
+        self.weights_grad *= delta
+        self.bias_grad *= delta
 
 # 没有实现 padding 和 stride
 class Conv(Layer):
@@ -33,6 +47,8 @@ class Conv(Layer):
 
         self.kernels = np.random.randn(*self.kernels_shape)
         self.biases = np.random.randn(*self.output_shape)
+        self.kernels_grad = np.zeros(self.kernels.shape)
+        self.biases_grad = np.zeros(self.biases.shape)
     
     def forward(self, input):
         self.input = input
@@ -43,19 +59,32 @@ class Conv(Layer):
 
         return self.output
 
-    def backward(self, output_grad, learning_rate):
-        kernels_grad = np.zeros(self.kernels_shape)
+    def backward(self, output_grad):
         input_grad = np.zeros(self.input_shape)
+        now_kernels_grad = np.zeros(self.kernels_shape)
 
         for i in range(self.depth):
             for j in range(self.in_channel):
-                kernels_grad[i,j] = signal.correlate2d(self.input[j],output_grad[i],"valid")
+                now_kernels_grad[i,j] = signal.correlate2d(self.input[j],output_grad[i],"valid")
                 input_grad[j] += signal.correlate2d(output_grad[i],self.kernels[i,j],'full')
         
-        self.kernels -= learning_rate * kernels_grad
-        self.biases -= learning_rate * output_grad
+        self.kernels_grad += now_kernels_grad
+        self.biases_grad += output_grad
         
         return input_grad
+    
+    def zero_grad(self):
+        self.kernels_grad = np.zeros(self.kernels.shape)
+        self.biases_grad = np.zeros(self.biases.shape)
+
+    def optimize(self, learning_rate):
+        self.kernels -= learning_rate * self.kernels_grad
+        self.biases -= learning_rate * self.biases_grad
+        pass
+
+    def SDG_grad(self, delta):
+        self.biases_grad *= delta
+        self.kernels_grad *= delta
 
 class Reshape(Layer):
     def __init__(self, input_shape, output_shape):
@@ -65,5 +94,5 @@ class Reshape(Layer):
     def forward(self, input):
         return input.reshape(self.out_shape)
     
-    def backward(self, output_grad, learning_rate):
+    def backward(self, output_grad):
         return output_grad.reshape(self.in_shape)

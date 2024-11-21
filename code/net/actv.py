@@ -11,5 +11,5 @@ class Actv(Layer):
 
         return self.activation(input)
     
-    def backward(self, output_grad, learning_rate):
+    def backward(self, output_grad):
         return np.multiply(output_grad,self.activation_prime(self.input))

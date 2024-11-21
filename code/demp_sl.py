@@ -7,6 +7,8 @@ from net.actvs import Sigmoid,Softmax
 from net.loss import categorical_cross_entropy,categorical_cross_entropy_prime
 import net.model as model
 
+# 主要用于复现实验
+
 def process_data(x,y,limit):
     x = x[:limit]
     x = x.reshape(len(x),1,28,28)
@@ -20,8 +22,8 @@ def process_data(x,y,limit):
 
 (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
-x_train,y_train = process_data(x_train,y_train,800)
-x_test,y_test = process_data(x_test,y_test,200)
+x_train,y_train = process_data(x_train,y_train,100)
+x_test,y_test = process_data(x_test,y_test,300)
 
 network = [
     Conv((1,28,28),3,5),
@@ -39,10 +41,11 @@ model.train(
     loss_prime=categorical_cross_entropy_prime,
     x_train=x_train,
     y_train=y_train,
-    epoches=200,
+    epoches=100,
     learning_rate=0.005
 )
-model.save(network,'./save/s_m.j')
+
+model.save(network=network,path='./save/mnist.j')
 
 acc = 0
 for x,y in zip(x_test,y_test):
