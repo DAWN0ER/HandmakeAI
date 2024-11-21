@@ -2,6 +2,7 @@ from net.layers import *
 from net.actvs import *
 import json,os
 import numpy as np
+from tqdm import tqdm
 
 def predict(nwtwork, input):
     output = input
@@ -26,7 +27,9 @@ def train(network, loss, loss_prime, x_train,y_train,epoches = 1000, learning_ra
         err /= len(x_train)
         print(f"epoch:{i+1},err={err}")
 
-def batch_train(network, loss, loss_prime, x_train,y_train, batch_size = 25, epoches = 1000, learning_rate = 0.002, shuffle = True):
+def batch_train(network, loss, loss_prime, x_train,y_train, 
+                batch_size = 25, epoches = 1000, learning_rate = 0.002, learning_decay = 0.95,delta = 0.9,
+                shuffle = True, print_turn = 20):
     x = np.copy(x_train)
     y = np.copy(y_train)
     for epoch in range(epoches):
@@ -41,27 +44,28 @@ def batch_train(network, loss, loss_prime, x_train,y_train, batch_size = 25, epo
         ## 梯度清零
         for layer in (network):
             layer.zero_grad()
-
+        ## 学习率自降
+            learning_rate *= learning_decay
         for batch_idx, (x_batch, y_batch) in enumerate(zip(x_batches, y_batches)):
-            # 不知道这样算不算对, 但是累加器这个我真的懒得做了
             err = 0.0
             ## SDG
             for layer in (network):
-                layer.SDG_grad(0.9)
-            for xi,yi in zip(x_batch,y_batch):
+                layer.SDG_grad(delta)
+            for xi,yi in tqdm(zip(x_batch,y_batch)):
                 output = predict(network,xi)
-                err += loss(y, output)
+                err += loss(yi, output)
                 # 累加梯度
                 grad = loss_prime(yi, output)
                 for layer in reversed(network):
                     grad = layer.backward(grad)
+
             # 更新梯度
             for layer in network:
                 layer.optimize(learning_rate)
             err /= batch_size
-            # 每 20 个 batch 输出一次
-            if batch_idx % 20 == 0:
-                print(f'Epoch [{epoch+1}/{epoches}], Batch [{batch_idx+1}/{num_batches}], Loss: {err}, batch-size: {batch_size}')
+            # 每 print_turn 个 batch 输出一次
+            if batch_idx % print_turn == 0:
+                print(f'Epoch [{epoch+1}/{epoches}], Batch [{batch_idx+1}/{num_batches}], Loss: {err:.5f}, batch-size: {batch_size}')
 
 def batch_data(data,batch_size):
     if batch_size <=0:
@@ -115,6 +119,11 @@ def save(network,path):
             idx2np[layer_dict['biases']] = layer.biases
             idx += 1
 
+        elif isinstance(layer,Pool):
+            layer_dict['init'] = dict()
+            layer_dict['init']['pool_size'] = layer.pool_size
+            layer_dict['init']['stride'] = layer.stride
+
         save.append(layer_dict)
     
     with open(path,'w') as file:
@@ -142,6 +151,9 @@ def load(path):
         # Reshape
         elif clazz_name == str(Reshape):
             layer = Reshape(**layer_dict['init'])
+        # Pool
+        elif clazz_name == str(Pool):
+            layer = Pool(**layer_dict['init'])
         # Actv
         elif clazz_name == str(Tanh):
             layer = Tanh()

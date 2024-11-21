@@ -6,7 +6,7 @@ class Layer:
     def forward(self, input):
         pass
 
-    def backward(self, output_grad, batch_size):
+    def backward(self, output_grad):
         pass
 
     def zero_grad(self):

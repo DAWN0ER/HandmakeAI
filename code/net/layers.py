@@ -96,3 +96,37 @@ class Reshape(Layer):
     
     def backward(self, output_grad):
         return output_grad.reshape(self.in_shape)
+    
+# MAX 池化
+class Pool(Layer):
+    def __init__(self,pool_size,stride):
+        self.pool_size = pool_size
+        self.stride = stride
+    
+    def forward(self, input):
+        self.in_shape = input.shape
+        d,h,w = self.in_shape
+        o_h = (h-self.pool_size) // self.stride + 1
+        o_w = (w-self.pool_size) // self.stride + 1
+        output =  np.zeros((d,o_h,o_w))
+        self.input_idx = []
+
+        for idx_d in range(d):
+            for i in range(o_h):
+                for j in range(o_w):
+                    start_i = i * self.stride
+                    start_j = j * self.stride
+                    pool = input[idx_d, start_i:start_i+self.pool_size, start_j:start_j+self.pool_size]
+                    # 最大值
+                    output[idx_d][i][j] = np.max(pool)
+                    idx_h,idx_w = np.unravel_index(np.argmax(pool),pool.shape)
+                    # 记录 idx
+                    self.input_idx.append((idx_d,i * self.stride + idx_h,j * self.stride + idx_w))
+        return output
+    
+    def backward(self, output_grad):
+        input_grad = np.zeros(self.in_shape)
+        for (d,w,h),v in zip(self.input_idx,output_grad.flatten()):
+            input_grad[d,w,h] += v
+        return input_grad
+        
