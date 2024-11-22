@@ -80,7 +80,6 @@ class Conv(Layer):
     def optimize(self, learning_rate):
         self.kernels -= learning_rate * self.kernels_grad
         self.biases -= learning_rate * self.biases_grad
-        pass
 
     def SDG_grad(self, delta):
         self.biases_grad *= delta

@@ -20,9 +20,9 @@ def load_data():
 
 (x_train,y_train),(x_test,y_test) = load_data()
 indices = np.random.permutation(x_test.shape[0])
-x_test = x_test[0:300:10]
-y_test = y_test[0:300:10]
-network = mm.load('./save/clsf.j')
+x_test = x_test[indices]
+y_test = y_test[indices]
+network = mm.load('./save/clsf2.j')
 
 acc = 0
 for x,y in zip(x_test,y_test):
@@ -30,5 +30,5 @@ for x,y in zip(x_test,y_test):
     idx = np.argmax(pred)
     if idx == np.argmax(y):
         acc += 1
-    print(f'pred:{idx},ground true:{np.argmax(y)}. probability:{pred[idx,0]}')
+    print(f'pred:{pred}|{idx}=={np.argmax(y)}. probability:{pred[idx,0]:.5f}:')
 print(f'acc={acc/len(x_test)}')
