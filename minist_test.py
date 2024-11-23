@@ -43,12 +43,10 @@ for epoch in range(epoches) :
         loss_prime=categorical_cross_entropy_prime,
         x_train=x_train,
         y_train=y_train,
-        epoches=1,
         learning_rate=0.005,
         batch_size=10,
         delta=0.2,
         print_turn=100,
-        learning_decay=1
     )
     acc = 0
     for x,y in tqdm(zip(x_test,y_test)):
@@ -60,4 +58,4 @@ for epoch in range(epoches) :
     print(f'Epoch:{epoch+1}:acc={acc}')
     if acc > best_acc:
         best_acc = acc
-        model.save(network,'./save/s_m.j')
+        model.save(network,'./save/mnist.j')
