@@ -5,7 +5,7 @@ from net.layers import *
 import net.dataloader as loader
 import net.model as mm
 import net.loss as loss
-from tqdm import tqdm
+from tqdm import tqdm,trange
 
 '''
 (6750, 224, 224, 1)
@@ -30,25 +30,36 @@ def load_data():
         return (x_train,y_train),(x_test,y_test)
 
 network = [
-    Conv((1,224,224),9,16),         #=> (16,216,216)
+    Conv((1,224,224),9,8),         #=> (16,216,216)
     Relu(),
     Pool(2,2),                      #=> (16,108,108)
-    Conv((16,108,108),3,32),        #=> (32,106,106)
+    Conv((8,108,108),5,16),        #=> (32,104,104)
     Relu(),
-    Pool(2,2),                      #=> (32,53,53)
-    Reshape((32,53,53),(32*53*53,1)),
-    Fc(32*53*53,256),
+    Pool(2,2),                      #=> (32,52,52)
+    Conv((16,52,52),3,32),          #=> (64,50,50)
     Relu(),
-    Fc(256,256),
+    Conv((32,50,50),3,32),
+    Relu(),
+    Conv((32,48,48),3,16),
+    Relu(),
+    Pool(4,2),
+    Reshape((16,22,22),(16*22*22,1)),
+    Fc(16*22*22,124),
+    Relu(),
+    Fc(124,124),
     Tanh(),
-    Fc(256,6),
+    Fc(124,6),
     Softmax(),
 ]
 
+# 用于继续训练
+network = mm.load('./save/clsf3-2.j')
+print('继续训练')
+
 if __name__ == '__main__':
     (x_train,y_train),(x_test,y_test) = load_data()
-    x_train = x_train[0:6750:2]
-    y_train = y_train[0:6750:2]
+    x_train = x_train[0:len(x_train):2]
+    y_train = y_train[0:len(y_train):2]
     indices = np.random.permutation(x_train.shape[0])
     x_train = x_train[indices]
     y_train = y_train[indices]
@@ -57,10 +68,15 @@ if __name__ == '__main__':
 
     print(x_train.shape)
 
-    epoches = 2
-    batch_size = 32
+    epoches = 10
+    batch_size = 25
     best_acc = 0.0
+    learning_decay=0.9
+    learning_rate = 1e-5
     for epoch in range(epoches):
+
+        if(epoch >= 1):
+            learning_rate *= learning_decay
 
         mm.batch_train(
             network=network,
@@ -68,23 +84,24 @@ if __name__ == '__main__':
             loss_prime=loss.categorical_cross_entropy_prime,
             x_train=x_train,
             y_train=y_train,
-            epoches=1,
-            learning_rate=0.0001/batch_size,
+            learning_rate=learning_rate,
             batch_size=batch_size,
             print_turn=1,
             shuffle=True,
-            delta=0.75,
-            learning_decay=1
+            delta=0.9
         )
 
         acc = 0
-        for x,y in tqdm(zip(x_test,y_test)):
+        length = len(x_test)
+        for i in trange(length):
+            x = x_test[i]
+            y = y_test[i]
             pred = mm.predict(network,x)
             idx = np.argmax(pred)
             if idx == np.argmax(y):
                 acc += 1
-        acc = acc/len(x_test)
-        print(f'test acc={acc}')
+        acc = acc/length
+        print(f'Epoch:{epoch+1}:acc={acc}')
         if (acc > best_acc):
             best_acc = acc
-            mm.save(network=network, path='./save/clsf2.j')
+            mm.save(network=network, path='./save/clsf3-3.j')

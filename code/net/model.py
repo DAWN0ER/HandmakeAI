@@ -11,9 +11,9 @@ def predict(nwtwork, input):
     return output
 
 def train(network, loss, loss_prime, x_train,y_train,epoches = 1000, learning_rate = 0.002):
-    for i in range(epoches):
+    for epoch in range(epoches):
         err = 0
-        for x,y in zip(x_train,y_train):
+        for x,y in tqdm(zip(x_train,y_train)):
             # forward
             output = predict(network,x)
             err += loss(y, output)
@@ -25,47 +25,46 @@ def train(network, loss, loss_prime, x_train,y_train,epoches = 1000, learning_ra
                 layer.optimize(learning_rate)
 
         err /= len(x_train)
-        print(f"epoch:{i+1},err={err}")
+        print(f'Epoch [{epoch+1}/{epoches}], Loss: {err:.5f}')
 
 def batch_train(network, loss, loss_prime, x_train,y_train, 
-                batch_size = 25, epoches = 1000, learning_rate = 0.002, learning_decay = 0.95,delta = 0.9,
+                batch_size = 25, learning_rate = 0.002,delta = 0.9,
                 shuffle = True, print_turn = 20):
     x = np.copy(x_train)
     y = np.copy(y_train)
-    for epoch in range(epoches):
-        if shuffle:
-            indices = np.random.permutation(x.shape[0])
-            x = x[indices]
-            y = y[indices]
-        # 提取 batch 数据
-        x_batches = batch_data(x,batch_size)
-        y_batches = batch_data(y,batch_size)
-        num_batches = len(x_batches)
-        ## 梯度清零
+    if shuffle:
+        indices = np.random.permutation(x.shape[0])
+        x = x[indices]
+        y = y[indices]
+    # 提取 batch 数据
+    x_batches = batch_data(x,batch_size)
+    y_batches = batch_data(y,batch_size)
+    num_batches = len(x_batches)
+    ## 梯度清零
+    for layer in (network):
+        layer.zero_grad()
+    for batch_idx, (x_batch, y_batch) in enumerate(zip(x_batches, y_batches)):
+    # for batch_idx, (x_batch, y_batch) in tqdm(enumerate(zip(x_batches, y_batches))):
+        err = 0.0
+        ## SDG
         for layer in (network):
-            layer.zero_grad()
-        ## 学习率自降
-            learning_rate *= learning_decay
-        for batch_idx, (x_batch, y_batch) in enumerate(zip(x_batches, y_batches)):
-            err = 0.0
-            ## SDG
-            for layer in (network):
-                layer.SDG_grad(delta)
-            for xi,yi in tqdm(zip(x_batch,y_batch)):
-                output = predict(network,xi)
-                err += loss(yi, output)
-                # 累加梯度
-                grad = loss_prime(yi, output)
-                for layer in reversed(network):
-                    grad = layer.backward(grad)
+            layer.SDG_grad(delta)
+        for xi,yi in tqdm(zip(x_batch,y_batch)):
+        # for xi,yi in zip(x_batch,y_batch):
+            output = predict(network,xi)
+            err += loss(yi, output)
+            # 累加梯度
+            grad = loss_prime(yi, output)
+            for layer in reversed(network):
+                grad = layer.backward(grad)
 
-            # 更新梯度
-            for layer in network:
-                layer.optimize(learning_rate)
-            err /= batch_size
-            # 每 print_turn 个 batch 输出一次
-            if batch_idx % print_turn == 0:
-                print(f'Epoch [{epoch+1}/{epoches}], Batch [{batch_idx+1}/{num_batches}], Loss: {err:.5f}, batch-size: {batch_size}')
+        # 更新梯度
+        for layer in network:
+            layer.optimize(learning_rate)
+        err /= batch_size
+        # 每 print_turn 个 batch 输出一次
+        if (batch_idx+1) % print_turn == 0:
+            print(f'Batch [{batch_idx+1}/{num_batches}], Loss: {err:.5f}, batch-size: {batch_size}')
 
 def batch_data(data,batch_size):
     if batch_size <=0:

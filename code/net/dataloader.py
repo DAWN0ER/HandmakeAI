@@ -8,6 +8,7 @@ def load_img(img_path):
     img = cv2.resize(img,(224,224))
     img = np.reshape(img,(1,224,224))
     img = img.astype("float32")/255
+    img = cv2.GaussianBlur(img,(9,9), 0)
     return img
 
 classify_list = ['8PSK','BPSK' ,'PAM4' ,'QAM16','QAM64','QPSK']
@@ -40,6 +41,8 @@ def load_dataset():
             else:
                 group[dB] = [name]
         for dB,img_ns in group.items():
+            if dB<=3: 
+                continue
             img_train = img_ns[:45]
             img_test = img_ns[-5:]
             for img_p in img_train:
@@ -49,12 +52,7 @@ def load_dataset():
                 # 数据增强
                 if dB >= 10 :
                     tmp = np.flip(img,1)
-                    x_train.append(tmp)
-                    y_train.append(classify[clazz])
                     tmp = np.flip(tmp,2)
-                    x_train.append(tmp)
-                    y_train.append(classify[clazz])
-                    tmp = np.flip(tmp,1)
                     x_train.append(tmp)
                     y_train.append(classify[clazz])
 

@@ -1,6 +1,7 @@
 import net.model as mm
 import numpy as np
 import net.dataloader as loader
+from tqdm import trange
 
 def load_data():
     path = './works/dataset_npz/signal.npz'
@@ -19,16 +20,21 @@ def load_data():
 
 
 (x_train,y_train),(x_test,y_test) = load_data()
+# x_test = x_test[0:240:4]
+# y_test = y_test[0:240:4]
 indices = np.random.permutation(x_test.shape[0])
 x_test = x_test[indices]
 y_test = y_test[indices]
-network = mm.load('./save/clsf2.j')
+network = mm.load('./save/clsf3-2.j')
 
 acc = 0
-for x,y in zip(x_test,y_test):
+length = len(x_test)
+for i in trange(length):
+    x = x_test[i]
+    y = y_test[i]
     pred = mm.predict(network,x)
     idx = np.argmax(pred)
     if idx == np.argmax(y):
         acc += 1
-    print(f'pred:{pred}|{idx}=={np.argmax(y)}. probability:{pred[idx,0]:.5f}:')
+    # print(f'pred|{idx}=={np.argmax(y)}|T. probability:{pred[idx,0]:.5f}:')
 print(f'acc={acc/len(x_test)}')

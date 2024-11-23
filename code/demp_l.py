@@ -21,7 +21,7 @@ def process_data(x,y,limit):
 x_train,y_train = process_data(x_train,y_train,100)
 x_test,y_test = process_data(x_test,y_test,300)
 
-network = model.load(path='./save/mnist.j')
+network = model.load(path='./save/s_m.j')
 
 acc = 0
 for x,y in zip(x_test,y_test):
